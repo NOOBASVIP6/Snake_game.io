@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake.io Arena</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        .menu-card {
+            background: linear-gradient(180deg, #1e293b 0%, #172033 100%);
+            padding: 1.75rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+            width: 420px;
+            max-width: 90%;
+            border: 1px solid #334155;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 0.25rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #4ade80, #38bdf8 60%, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+        }
+
+        .score-info {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            margin-bottom: 1.25rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        /* Вкладки Скины / События — как в io-играх */
+        .menu-tabs {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+            background: #0f172a;
+            border-radius: 0.75rem;
+            padding: 0.3rem;
+        }
+
+        .menu-tab {
+            flex: 1;
+            padding: 0.55rem 0.5rem;
+            border-radius: 0.55rem;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .menu-tab.active {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Круглые аватарки скинов, горизонтальный скролл — как в Snake.io */
+        .skin-row {
+            display: flex;
+            gap: 0.9rem;
+            overflow-x: auto;
+            padding: 0.5rem 0.25rem 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .skin-avatar {
+            flex: 0 0 auto;
+            width: 68px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            cursor: pointer;
+        }
+
+        .skin-circle {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            border: 3px solid #334155;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 -6px 10px rgba(0,0,0,0.25);
+        }
+
+        .skin-avatar.active .skin-circle {
+            border-color: #4ade80;
+            box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.25), inset 0 -6px 10px rgba(0,0,0,0.25);
+        }
+
+        .skin-avatar.locked .skin-circle {
+            opacity: 0.45;
+        }
+
+        .skin-lock-badge {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            background: #0f172a;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            border: 1px solid #475569;
+        }
+
+        .skin-avatar-name {
+            font-size: 0.68rem;
+            color: #cbd5e1;
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .event-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.9rem;
+            padding: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+            text-align: left;
+        }
+
+        .event-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .event-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .event-desc {
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        .event-badge {
+            margin-left: auto;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            white-space: nowrap;
+        }
+
+        .color-options {
+            display: none;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        button.btn-primary {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: #052e16;
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px rgba(34, 197, 94, 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        button.btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        #scene3d {
+            perspective: 1400px;
+            perspective-origin: 50% 20%;
+        }
+
+        canvas {
+            background: #090d16;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 60px 90px -20px rgba(0,0,0,0.9);
+            border-radius: 8px;
+            transform: rotateX(28deg);
+            transform-origin: 50% 100%;
+            transition: transform 0.3s ease;
+        }
+
+        canvas.flat-view {
+            transform: rotateX(0deg);
+        }
+
+        #tilt-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 6;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        #tilt-toggle:hover {
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        #joystick-zone {
+            position: fixed;
+            left: 30px;
+            bottom: 30px;
+            width: 150px;
+            height: 150px;
+            z-index: 7;
+            display: none;
+            touch-action: none;
+        }
+
+        #joystick-base {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(2px);
+        }
+
+        #joystick-knob {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ffffff, #cbd5e1);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        }
+
+        #boost-btn {
+            position: fixed;
+            right: 32px;
+            bottom: 38px;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(2px);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            color: #fef3c7;
+            font-size: 2rem;
+            z-index: 7;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            user-select: none;
+        }
+
+        #boost-btn.active {
+            background: rgba(250, 204, 21, 0.35);
+            border-color: rgba(250, 204, 21, 0.8);
+            transform: scale(0.92);
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 5;
+            pointer-events: none;
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.8);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .invulnerable-badge {
+            position: absolute;
+            top: 210px;
+            right: 20px;
+            background: rgba(245, 158, 11, 0.9);
+            color: #000;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: none;
+            z-index: 5;
+        }
+
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            width: 190px;
+            display: none;
+        }
+
+        #leaderboard .lb-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #leaderboard .lb-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            padding: 2px 0;
+            color: #e2e8f0;
+        }
+
+        #leaderboard .lb-row.lb-me {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        #leaderboard .lb-rank {
+            width: 16px;
+            color: #64748b;
+            font-weight: bold;
+        }
+
+        #leaderboard .lb-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        #leaderboard .lb-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #leaderboard .lb-score {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud" style="display: none;">
+        <div>Очки: <span id="hud-score" style="color: #38bdf8;">0</span></div>
+        <div>Рекорд: <span id="hud-highscore" style="color: #4ade80;">0</span></div>
+        <div>Длина: <span id="hud-length" style="color: #f59e0b;">15</span></div>
+    </div>
+
+    <div id="controls-hint" class="controls-hint" style="display: none;">⚡ Удерживайте **ЛКМ** или **ПРОБЕЛ** для ускорения</div>
+    <div id="inv-badge" class="invulnerable-badge">🛡️ ЗАЩИТА ПРИ СПАВНЕ</div>
+    <div id="leaderboard">
+        <div class="lb-title">🏆 Таблица лидеров</div>
+        <div id="leaderboard-body"></div>
+    </div>
+
+    <div id="menu-overlay">
+
+        <div class="menu-card">
+            <h1>SNAKE.IO ARENA</h1>
+            <div class="score-info">Макс. очки: <span id="max-score-display" style="color: #4ade80; font-weight: bold;">0</span></div>
+
+            <div class="input-group">
+                <label for="nickname">Никнейм:</label>
+                <input type="text" id="nickname" maxlength="12" placeholder="Введите имя...">
+            </div>
+
+            <div class="menu-tabs">
+                <button class="menu-tab active" id="tab-btn-skins" onclick="switchMenuTab('skins')">🎨 Скины</button>
+                <button class="menu-tab" id="tab-btn-events" onclick="switchMenuTab('events')">🎉 События</button>
+            </div>
+
+            <div id="tab-panel-skins" class="tab-panel active">
+                <div class="skin-row" id="skin-row">
+                    <div class="skin-avatar active" data-skin="basic" onclick="selectSkin('basic')">
+                        <div class="skin-circle" style="background: radial-gradient(circle at 35% 30%, #7dd3fc, #38bdf8 60%, #0284c7);"></div>
+                        <span class="skin-avatar-name">Базовый</span>
+                    </div>
+                    <div class="skin-avatar locked" id="skin-2color" data-skin="2color" onclick="selectSkin('2color')">
+                        <div class="skin-circle" style="background: conic-gradient(#a855f7, #ec4899, #a855f7);">
+                            <div class="skin-lock-badge">🔒</div>
+                        </div>
+                        <span class="skin-avatar-name">2 Цвета<br><small id="lock-2color" style="color:#f43f5e;">200 очк.</small></span>
+                    </div>
+                    <div class="skin-avatar locked" id="skin-3color" data-skin="3color" onclick="selectSkin('3color')">
+                        <div class="skin-circle" style="background: conic-gradient(#f59e0b, #10b981, #3b82f6, #f59e0b);">
+                            <div class="skin-lock-badge">🔒</div>
+                        </div>
+                        <span class="skin-avatar-name">3 Цвета<br><small id="lock-3color" style="color:#f43f5e;">300 очк.</small></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-panel-events" class="tab-panel">
+                <div class="event-card">
+                    <div class="event-icon" style="background: radial-gradient(circle at 35% 30%, #fca5a5, #ef4444);">🎃</div>
+                    <div>
+                        <div class="event-title">Хэллоуин-скин</div>
+                        <div class="event-desc">Тыквенная расцветка змейки</div>
+                    </div>
+                    <div class="event-badge">СКОРО</div>
+                </div>
+                <div class="event-card">
+                    <div class="event-icon" style="background: radial-gradient(circle at 35% 30%, #bae6fd, #0ea5e9);">❄️</div>
+                    <div>
+                        <div class="event-title">Зимнее событие</div>
+                        <div class="event-desc">Снежный узор + следы-снежинки</div>
+                    </div>
+                    <div class="event-badge">СКОРО</div>
+                </div>
+                <div class="event-card">
+                    <div class="event-icon" style="background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b);">🏆</div>
+                    <div>
+                        <div class="event-title">Турнир недели</div>
+                        <div class="event-desc">Лучший счёт получает золотой скин</div>
+                    </div>
+                    <div class="event-badge">СКОРО</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-primary" onclick="startGame('bots')">▶ ИГРАТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scene3d">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <button id="tilt-toggle" onclick="toggleTilt()">🎥 Вид: объёмный</button>
+
+    <div id="joystick-zone">
+        <div id="joystick-base"></div>
+        <div id="joystick-knob"></div>
+    </div>
+    <div id="boost-btn">⚡</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 1000;
+        const CANVAS_HEIGHT = 650;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        let maxScore = parseInt(localStorage.getItem('snake_maxScore')) || 0;
+        let selectedSkin = localStorage.getItem('snake_skin') || 'basic';
+        let nickname = localStorage.getItem('snake_nickname') || 'Анаконда';
+
+        document.getElementById('nickname').value = nickname;
+
+        document.getElementById('nickname').addEventListener('input', (e) => {
+            nickname = e.target.value.trim() || 'Анаконда';
+            localStorage.setItem('snake_nickname', nickname);
+        });
+
+        const SKINS = {
+            'basic': ['#38bdf8', '#0284c7'],
+            '2color': ['#a855f7', '#ec4899'],
+            '3color': ['#f59e0b', '#10b981', '#3b82f6']
+        };
+
+        function updateUI() {
+            document.getElementById('max-score-display').textContent = maxScore;
+            
+            if (maxScore >= 200) {
+                document.getElementById('skin-2color').classList.remove('locked');
+                document.getElementById('lock-2color').style.display = 'none';
+            }
+            if (maxScore >= 300) {
+                document.getElementById('skin-3color').classList.remove('locked');
+                document.getElementById('lock-3color').style.display = 'none';
+            }
+
+            document.querySelectorAll('.skin-avatar').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.skin === selectedSkin) btn.classList.add('active');
+            });
+        }
+
+        function selectSkin(skinName) {
+            if (skinName === '2color' && maxScore < 200) return;
+            if (skinName === '3color' && maxScore < 300) return;
+            selectedSkin = skinName;
+            localStorage.setItem('snake_skin', selectedSkin);
+            updateUI();
+        }
+
+        function switchMenuTab(tab) {
+            document.getElementById('tab-btn-skins').classList.toggle('active', tab === 'skins');
+            document.getElementById('tab-btn-events').classList.toggle('active', tab === 'events');
+            document.getElementById('tab-panel-skins').classList.toggle('active', tab === 'skins');
+            document.getElementById('tab-panel-events').classList.toggle('active', tab === 'events');
+        }
+
+        function toggleTilt() {
+            const isFlat = canvas.classList.toggle('flat-view');
+            document.getElementById('tilt-toggle').textContent = isFlat ? '🎥 Вид: плоский' : '🎥 Вид: объёмный';
+        }
+
+        updateUI();
+
+        // ---------------------------------------------------------
+        // ДВИЖОК: тайминг на основе дельты времени (не зависит от FPS)
+        // ---------------------------------------------------------
+        const BASE_SPEED = 150;   // px/сек (было 2.5 px/кадр при 60 FPS)
+        const BOOST_SPEED = 300;  // px/сек (было 5.0 px/кадр)
+        const TURN_RATE = 0.18;   // манёвренность игрока при 60 FPS
+        const BOT_TURN_RATE = 0.3; // нано-омега-гении — реагируют почти мгновенно
+        const GRID_CELL = 50;     // размер ячейки пространственной сетки
+        const MAX_BOTS = 5;
+        const FOOD_TARGET = 60;
+
+        let gameRunning = false;
+        let score = 0;
+        let player = null;
+        let bots = [];
+        let foods = [];
+        let kissEffects = []; // временные "поцелуи" при встрече змей одного цвета
+        let mousePos = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
+        let isMouseDown = false;
+        let isSpaceDown = false;
+        let lastTimestamp = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+
+        window.addEventListener('mousedown', (e) => { if (e.button === 0) isMouseDown = true; });
+        window.addEventListener('mouseup', (e) => { if (e.button === 0) isMouseDown = false; });
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') { isSpaceDown = true; e.preventDefault(); } });
+        window.addEventListener('keyup', (e) => { if (e.code === 'Space') isSpaceDown = false; });
+
+        // ---------------------------------------------------------
+        // Мобильное управление: джойстик для поворота + кнопка ускорения
+        // (Pointer Events — работает и с тачем, и с мышкой)
+        // ---------------------------------------------------------
+        let touchAngle = null;   // текущее направление от джойстика (null = джойстик не тронут)
+        let isTouchBoost = false;
+
+        const boostBtn = document.getElementById('boost-btn');
+        const zone = document.getElementById('joystick-zone');
+        const knob = document.getElementById('joystick-knob');
+        let joystickPointerId = null;
+        const maxKnobDist = 44;
+
+        function handleJoystickMove(clientX, clientY) {
+            const rect = zone.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            let dx = clientX - cx;
+            let dy = clientY - cy;
+            const dist = Math.min(maxKnobDist, Math.hypot(dx, dy));
+            const angle = Math.atan2(dy, dx);
+            knob.style.transform = `translate(${Math.cos(angle) * dist - 32}px, ${Math.sin(angle) * dist - 32}px)`;
+            touchAngle = angle;
+        }
+
+        function resetKnob() {
+            knob.style.transform = 'translate(-50%, -50%)';
+            touchAngle = null;
+            joystickPointerId = null;
+        }
+
+        zone.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            joystickPointerId = e.pointerId;
+            zone.setPointerCapture(e.pointerId);
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        zone.addEventListener('pointermove', (e) => {
+            if (e.pointerId !== joystickPointerId) return;
+            e.preventDefault();
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        zone.addEventListener('pointerup', (e) => {
+            if (e.pointerId !== joystickPointerId) return;
+            resetKnob();
+        });
+        zone.addEventListener('pointercancel', resetKnob);
+
+        boostBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            isTouchBoost = true;
+            boostBtn.classList.add('active');
+        });
+
+        boostBtn.addEventListener('pointerup', (e) => {
+            e.preventDefault();
+            isTouchBoost = false;
+            boostBtn.classList.remove('active');
+        });
+        boostBtn.addEventListener('pointercancel', () => {
+            isTouchBoost = false;
+            boostBtn.classList.remove('active');
+        });
+
+        // Пространственная хеш-сетка — быстрый поиск соседей вместо перебора O(n²)
+        class SpatialGrid {
+            constructor(cellSize) {
+                this.cellSize = cellSize;
+                this.cells = new Map();
+            }
+            key(x, y) {
+                return Math.floor(x / this.cellSize) + '_' + Math.floor(y / this.cellSize);
+            }
+            clear() { this.cells.clear(); }
+            insert(item) {
+                const k = this.key(item.x, item.y);
+                let bucket = this.cells.get(k);
+                if (!bucket) { bucket = []; this.cells.set(k, bucket); }
+                bucket.push(item);
+            }
+            query(x, y, radius) {
+                const result = [];
+                const minCx = Math.floor((x - radius) / this.cellSize);
+                const maxCx = Math.floor((x + radius) / this.cellSize);
+                const minCy = Math.floor((y - radius) / this.cellSize);
+                const maxCy = Math.floor((y + radius) / this.cellSize);
+                for (let cx = minCx; cx <= maxCx; cx++) {
+                    for (let cy = minCy; cy <= maxCy; cy++) {
+                        const bucket = this.cells.get(cx + '_' + cy);
+                        if (bucket) result.push(...bucket);
+                    }
+                }
+                return result;
+            }
+        }
+
+        const bodyGrid = new SpatialGrid(GRID_CELL);
+        const foodGrid = new SpatialGrid(GRID_CELL);
+
+        function refreshFoodGrid() {
+            foodGrid.clear();
+            foods.forEach(f => foodGrid.insert(f));
+        }
+
+        function refreshBodyGrid() {
+            bodyGrid.clear();
+            const allSnakes = [player, ...bots];
+            allSnakes.forEach(snake => {
+                if (!snake || snake.isDead) return;
+                for (let i = 3; i < snake.body.length; i += 2) {
+                    const seg = snake.body[i];
+                    bodyGrid.insert({ x: seg.x, y: seg.y, owner: snake });
+                }
+            });
+        }
+
+        class Snake {
+            constructor(x, y, isBot = false, name = "Бот", colors = ['#ef4444']) {
+                this.x = x;
+                this.y = y;
+                this.baseRadius = 10;
+                this.radius = this.baseRadius;
+                this.angle = Math.random() * Math.PI * 2;
+                this.isBot = isBot;
+                this.name = name;
+                this.colors = colors;
+                this.isBoosting = false;
+                this.invulnerableTimer = 0; // защиты при спавне больше нет
+                this.isDead = false;
+                this.turnRate = isBot ? BOT_TURN_RATE : TURN_RATE;
+                this.eatFlashTimer = 0; // игрок: сколько ещё показывать довольную мордашку 😋
+                const FACE_TYPES = ['normal', 'angry', 'sleepy', 'wink'];
+                this.faceType = isBot ? FACE_TYPES[Math.floor(Math.random() * FACE_TYPES.length)] : 'normal';
+
+                this.body = [];
+                this.length = isBot ? 20 : 400; // игрок стартует в 20 раз больше ботов
+                for (let i = 0; i < this.length; i++) {
+                    this.body.push({ x: x - i * 4, y: y });
+                }
+                this.boostDrainAccum = 0;
+            }
+
+            // Доля "массы" от 0 до 1 — крупная змея тяжелее и медленнее поворачивает
+            get mass() {
+                return Math.min(1, this.length / 250);
+            }
+
+            update(dt) {
+                if (this.isDead) return;
+
+                if (this.invulnerableTimer > 0) this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+                if (this.eatFlashTimer > 0) this.eatFlashTimer = Math.max(0, this.eatFlashTimer - dt);
+
+                if (!this.isBot) {
+                    this.isBoosting = (isMouseDown || isSpaceDown || isTouchBoost) && this.length > 10;
+                }
+
+                const speed = this.isBoosting ? BOOST_SPEED : BASE_SPEED;
+
+                // Потеря массы при ускорении — плата за скорость
+                if (this.isBoosting) {
+                    this.boostDrainAccum += dt;
+                    if (this.boostDrainAccum >= 0.08 && this.length > 10) {
+                        this.boostDrainAccum = 0;
+                        this.length -= 1;
+                        const tail = this.body[this.body.length - 1] || { x: this.x, y: this.y };
+                        foods.push({
+                            x: tail.x + (Math.random() - 0.5) * 10,
+                            y: tail.y + (Math.random() - 0.5) * 10,
+                            radius: 3,
+                            color: this.colors[0],
+                            value: 5
+                        });
+                    }
+                }
+
+                if (this.isBot) {
+                    this.updateBotAI(dt);
+                } else if (touchAngle !== null) {
+                    this.steerTowards(touchAngle, dt);
+                } else {
+                    const dx = mousePos.x - this.x;
+                    const dy = mousePos.y - this.y;
+                    this.steerTowards(Math.atan2(dy, dx), dt);
+                }
+
+                this.radius = this.baseRadius + this.mass * 6;
+
+                this.x += Math.cos(this.angle) * speed * dt;
+                this.y += Math.sin(this.angle) * speed * dt;
+
+                // Отталкивание от стен
+                const margin = this.radius;
+                if (this.x < margin) { this.x = margin; this.angle = Math.PI - this.angle; }
+                if (this.x > CANVAS_WIDTH - margin) { this.x = CANVAS_WIDTH - margin; this.angle = Math.PI - this.angle; }
+                if (this.y < margin) { this.y = margin; this.angle = -this.angle; }
+                if (this.y > CANVAS_HEIGHT - margin) { this.y = CANVAS_HEIGHT - margin; this.angle = -this.angle; }
+
+                this.body.unshift({ x: this.x, y: this.y });
+                while (this.body.length > Math.floor(this.length)) {
+                    this.body.pop();
+                }
+            }
+
+            // Плавный, независимый от FPS поворот; крупная змея теряет манёвренность
+            steerTowards(targetAngle, dt) {
+                let diff = targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                const agility = this.turnRate * (1 - this.mass * 0.45);
+                const factor = 1 - Math.pow(1 - agility, dt * 60);
+                this.angle += diff * factor;
+            }
+
+            updateBotAI(dt) {
+                // НАНО-ОМЕГА-ИИ: видят всё поле, точно знают кто крупнее/мельче —
+                // охотятся на слабых, убегают от тех кто крупнее (даже от игрока,
+                // если он вдруг стал не самым большим).
+                const allSnakes = [player, ...bots];
+
+                let prey = null, preyDist = Infinity;
+                let threat = null, threatDist = Infinity;
+                const scanRadius = 550;
+                allSnakes.forEach(s => {
+                    if (!s || s === this || s.isDead) return;
+                    const dist = Math.hypot(s.x - this.x, s.y - this.y);
+                    if (dist > scanRadius) return;
+                    if (s.length < this.length * 0.85 && dist < preyDist) { prey = s; preyDist = dist; }
+                    if (s.length > this.length * 1.05 && dist < threatDist) { threat = s; threatDist = dist; }
+                });
+
+                // Еда — выбираем самую выгодную, а не просто ближайшую
+                let bestFood = null, bestScore = -Infinity;
+                const sightRadius = 500;
+                foodGrid.query(this.x, this.y, sightRadius).forEach(f => {
+                    const dist = Math.hypot(f.x - this.x, f.y - this.y);
+                    if (dist > sightRadius) return;
+                    const score = f.value - dist * 0.04;
+                    if (score > bestScore) { bestScore = score; bestFood = f; }
+                });
+
+                let desiredAngle = this.angle;
+                this.isBoosting = false;
+
+                if (bestFood) {
+                    desiredAngle = Math.atan2(bestFood.y - this.y, bestFood.x - this.x);
+                }
+
+                // Охота на добычу помельче — приоритетнее еды
+                if (prey && preyDist < 280) {
+                    desiredAngle = Math.atan2(prey.y - this.y, prey.x - this.x);
+                    this.isBoosting = this.length > 30 && preyDist > 40;
+                }
+
+                // Упреждающее бегство от тел тех, кто крупнее — приоритетнее охоты
+                const dangerZone = 100;
+                let avoidX = 0, avoidY = 0, dangerCount = 0;
+                bodyGrid.query(this.x, this.y, dangerZone).forEach(seg => {
+                    if (seg.owner === this) return;
+                    if (seg.owner.length <= this.length * 1.02) return; // не крупнее — не страшно
+                    const lookAhead = 14;
+                    const px = seg.x + Math.cos(seg.owner.angle) * lookAhead;
+                    const py = seg.y + Math.sin(seg.owner.angle) * lookAhead;
+                    const dist = Math.hypot(px - this.x, py - this.y);
+                    if (dist < dangerZone && dist > 0) {
+                        avoidX += (this.x - px) / (dist * dist);
+                        avoidY += (this.y - py) / (dist * dist);
+                        dangerCount++;
+                    }
+                });
+                if (dangerCount > 0) {
+                    desiredAngle = Math.atan2(avoidY, avoidX);
+                    this.isBoosting = true;
+                }
+
+                // Заранее уходят от границ арены
+                const boundMargin = 90;
+                if (this.x < boundMargin || this.x > CANVAS_WIDTH - boundMargin || this.y < boundMargin || this.y > CANVAS_HEIGHT - boundMargin) {
+                    desiredAngle = Math.atan2(CANVAS_HEIGHT / 2 - this.y, CANVAS_WIDTH / 2 - this.x);
+                }
+
+                this.steerTowards(desiredAngle, dt);
+            }
+
+            die() {
+                if (this.isDead) return;
+                this.isDead = true;
+
+                // Превращаем тело змеи в еду
+                for (let i = 0; i < this.body.length; i += 2) {
+                    const seg = this.body[i];
+                    foods.push({
+                        x: seg.x + (Math.random() - 0.5) * 8,
+                        y: seg.y + (Math.random() - 0.5) * 8,
+                        radius: 5 + Math.random() * 3,
+                        color: this.colors[i % this.colors.length],
+                        value: 15
+                    });
+                }
+            }
+
+            draw() {
+                if (this.isDead) return;
+
+                // Тень тела на "полу" — рисуем пореже, ради производительности
+                // на очень длинных змеях
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                for (let i = 0; i < this.body.length; i += 3) {
+                    const segment = this.body[i];
+                    ctx.beginPath();
+                    ctx.ellipse(segment.x, segment.y + this.radius * 0.55, this.radius * 0.95, this.radius * 0.4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Рисование тела
+                for (let i = this.body.length - 1; i >= 0; i--) {
+                    const segment = this.body[i];
+                    const colorIndex = Math.floor(i / 2) % this.colors.length;
+                    
+                    ctx.beginPath();
+                    ctx.arc(segment.x, segment.y, this.radius, 0, Math.PI * 2);
+
+                    if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 10) % 2 === 0) {
+                        ctx.fillStyle = '#f59e0b';
+                    } else {
+                        ctx.fillStyle = this.colors[colorIndex];
+                    }
+
+                    // След при ускорении
+                    if (this.isBoosting && i === 0) {
+                        ctx.shadowColor = '#38bdf8';
+                        ctx.shadowBlur = 15;
+                    } else {
+                        ctx.shadowBlur = 0;
+                    }
+
+                    ctx.fill();
+                    ctx.closePath();
+
+                    // Блик — придаёт сегменту объём шарика/трубы
+                    ctx.beginPath();
+                    ctx.arc(segment.x - this.radius * 0.35, segment.y - this.radius * 0.35, this.radius * 0.4, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                    ctx.fill();
+                    ctx.closePath();
+                }
+                ctx.shadowBlur = 0;
+
+                // Мордашка: у игрока после поедания — довольная 😋, у ботов — своя у каждого
+                const eyeOffset = this.radius * 0.5;
+                const eyeX1 = this.x + Math.cos(this.angle + 0.5) * eyeOffset;
+                const eyeY1 = this.y + Math.sin(this.angle + 0.5) * eyeOffset;
+                const eyeX2 = this.x + Math.cos(this.angle - 0.5) * eyeOffset;
+                const eyeY2 = this.y + Math.sin(this.angle - 0.5) * eyeOffset;
+
+                if (this.eatFlashTimer > 0) {
+                    // Довольная мордашка после того как сожрал кого-то с головы
+                    ctx.font = `${Math.max(14, this.radius * 1.8)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('😋', this.x, this.y);
+                } else if (this.faceType === 'angry') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 1.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 1.5, 0, Math.PI * 2); ctx.fill();
+                    // Нахмуренные брови
+                    ctx.strokeStyle = '#7f1d1d';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(eyeX1 - 4, eyeY1 - 6); ctx.lineTo(eyeX1 + 3, eyeY1 - 2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(eyeX2 + 4, eyeY2 - 6); ctx.lineTo(eyeX2 - 3, eyeY2 - 2); ctx.stroke();
+                } else if (this.faceType === 'sleepy') {
+                    // Полузакрытые глаза — тонкие дуги вместо кружков
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 3.5, 0, Math.PI, false); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 3.5, 0, Math.PI, false); ctx.stroke();
+                } else if (this.faceType === 'wink') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 1.5, 0, Math.PI * 2); ctx.fill();
+                    // Второй глаз подмигивает — просто линия
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(eyeX2 - 3, eyeY2); ctx.lineTo(eyeX2 + 3, eyeY2); ctx.stroke();
+                } else {
+                    // Обычная мордашка
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 1.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 1.5, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Имя
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.name, this.x, this.y - this.radius - 8);
+            }
+        }
+
+        function spawnFood() {
+            while (foods.length < FOOD_TARGET) {
+                foods.push({
+                    x: Math.random() * (CANVAS_WIDTH - 60) + 30,
+                    y: Math.random() * (CANVAS_HEIGHT - 60) + 30,
+                    radius: 3 + Math.random() * 3,
+                    color: `hsl(${Math.random() * 360}, 85%, 60%)`,
+                    value: 10
+                });
+            }
+        }
+
+        const BOT_NAMES = ['AlfaBot', 'Neo', 'Cyber', 'Viper', 'Kobra', 'Slayer', 'Titan'];
+
+        // Общий пул расцветок — и для игрока (см. SKINS), и для ботов.
+        // В один момент времени каждой расцветкой владеет только одна живая змея.
+        const SKIN_POOL = [
+            ['#38bdf8', '#0284c7'],
+            ['#a855f7', '#ec4899'],
+            ['#f59e0b', '#10b981', '#3b82f6'],
+            ['#10b981', '#059669'],
+            ['#ef4444', '#f97316'],
+            ['#8b5cf6', '#c084fc'],
+            ['#f43f5e', '#fb7185'],
+            ['#22d3ee', '#0891b2'],
+            ['#facc15', '#ca8a04'],
+            ['#a3e635', '#65a30d']
+        ];
+
+        function colorsEqual(a, b) {
+            return a.length === b.length && a.every((c, i) => c === b[i]);
+        }
+
+        // Возвращает расцветку, которой сейчас не владеет ни одна живая змея
+        function pickAvailableSkin() {
+            const used = [];
+            if (player && !player.isDead) used.push(player.colors);
+            bots.forEach(b => { if (!b.isDead) used.push(b.colors); });
+
+            const free = SKIN_POOL.filter(c => !used.some(u => colorsEqual(u, c)));
+            const pool = free.length > 0 ? free : SKIN_POOL; // на всякий случай, если пул исчерпан
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function createBot() {
+            const margin = 100;
+            const x = Math.random() < 0.5 ? margin : CANVAS_WIDTH - margin;
+            const y = Math.random() * (CANVAS_HEIGHT - 200) + 100;
+            const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+            const skin = pickAvailableSkin();
+            return new Snake(x, y, true, name, skin);
+        }
+
+        function startGame() {
+            document.getElementById('menu-overlay').style.display = 'none';
+            document.getElementById('hud').style.display = 'flex';
+            document.getElementById('controls-hint').style.display = 'block';
+            document.getElementById('leaderboard').style.display = 'block';
+            document.getElementById('joystick-zone').style.display = 'block';
+            document.getElementById('boost-btn').style.display = 'flex';
+
+            const playerColors = SKINS[selectedSkin] || SKINS['basic'];
+            player = new Snake(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, false, nickname, playerColors);
+
+            bots = [];
+            for (let i = 0; i < MAX_BOTS; i++) {
+                bots.push(createBot());
+            }
+
+            foods = [];
+            spawnFood();
+            kissEffects = [];
+
+            score = 0;
+            document.getElementById('hud-score').textContent = score;
+            document.getElementById('hud-highscore').textContent = maxScore;
+            document.getElementById('hud-length').textContent = Math.floor(player.length);
+
+            gameRunning = true;
+            lastTimestamp = 0;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            if (score > maxScore) {
+                maxScore = score;
+                localStorage.setItem('snake_maxScore', maxScore);
+            }
+            updateUI();
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('controls-hint').style.display = 'none';
+            document.getElementById('inv-badge').style.display = 'none';
+            document.getElementById('leaderboard').style.display = 'none';
+            document.getElementById('joystick-zone').style.display = 'none';
+            document.getElementById('boost-btn').style.display = 'none';
+            document.getElementById('menu-overlay').style.display = 'flex';
+        }
+
+        // Таблица лидеров — сортировка живых змей по размеру
+        function updateLeaderboard() {
+            const allSnakes = [player, ...bots].filter(s => s && !s.isDead);
+            allSnakes.sort((a, b) => b.length - a.length);
+            const top = allSnakes.slice(0, 5);
+
+            const rows = top.map((s, i) => {
+                const isPlayer = s === player;
+                const approxScore = isPlayer ? score : Math.floor(s.length * 10);
+                const dotColor = s.colors[0];
+                const safeName = s.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `<div class="lb-row${isPlayer ? ' lb-me' : ''}">` +
+                    `<span class="lb-rank">${i + 1}</span>` +
+                    `<span class="lb-dot" style="background:${dotColor}"></span>` +
+                    `<span class="lb-name">${safeName}</span>` +
+                    `<span class="lb-score">${approxScore}</span>` +
+                    `</div>`;
+            }).join('');
+
+            document.getElementById('leaderboard-body').innerHTML = rows;
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            let dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+            // Защита от скачков dt (смена вкладки, лаги браузера) — иначе змея "телепортируется"
+            dt = Math.min(dt, 1 / 20);
+
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Сетка
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < CANVAS_WIDTH; x += 35) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
+            }
+            for (let y = 0; y < CANVAS_HEIGHT; y += 35) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_WIDTH, y); ctx.stroke();
+            }
+
+            // Бейдж защиты
+            document.getElementById('inv-badge').style.display = (player.invulnerableTimer > 0) ? 'block' : 'none';
+
+            // Сетки для ИИ ботов (поиск еды/угроз без перебора O(n²))
+            refreshFoodGrid();
+            refreshBodyGrid();
+
+            // Отрисовка еды — с тенью и объёмным градиентом (эффект шарика)
+            foods.forEach(f => {
+                // Тень на "полу"
+                ctx.beginPath();
+                ctx.ellipse(f.x, f.y + f.radius * 0.6, f.radius * 0.9, f.radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.fill();
+                ctx.closePath();
+
+                const grad = ctx.createRadialGradient(
+                    f.x - f.radius * 0.35, f.y - f.radius * 0.35, f.radius * 0.15,
+                    f.x, f.y, f.radius * 1.15
+                );
+                grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+                grad.addColorStop(0.35, f.color);
+                grad.addColorStop(1, f.color);
+
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.closePath();
+            });
+
+            // Обновление ботов (без отрисовки — рисуем позже, ПОД игроком)
+            bots.forEach((bot) => {
+                bot.update(dt);
+
+                for (let idx = foods.length - 1; idx >= 0; idx--) {
+                    const f = foods[idx];
+                    if (Math.hypot(bot.x - f.x, bot.y - f.y) < bot.radius + f.radius) {
+                        foods.splice(idx, 1);
+                        bot.length += (f.value / 10);
+                    }
+                }
+            });
+
+            // Обновление игрока
+            player.update(dt);
+
+            // Отрисовка: сначала боты, ИГРОК — ПОСЛЕДНИМ и поверх всех.
+            // Раньше было наоборот, и при длинной змее свои же кольца
+            // визуально прятали подплывшего бота — умирал "без причины".
+            bots.forEach(bot => bot.draw());
+            player.draw();
+
+            // Поедание еды игроком
+            for (let idx = foods.length - 1; idx >= 0; idx--) {
+                const f = foods[idx];
+                if (Math.hypot(player.x - f.x, player.y - f.y) < player.radius + f.radius) {
+                    foods.splice(idx, 1);
+                    player.length += (f.value / 10);
+                    score += f.value;
+                    document.getElementById('hud-score').textContent = score;
+                    document.getElementById('hud-length').textContent = Math.floor(player.length);
+                    if (score > maxScore) {
+                        document.getElementById('hud-highscore').textContent = score;
+                    }
+                }
+            }
+
+            spawnFood();
+
+            // ----------------------------------------------------
+            // СТОЛКНОВЕНИЯ через пространственную сетку — быстрее и точнее,
+            // чем полный перебор всех пар змей на каждом кадре
+            // ----------------------------------------------------
+            refreshBodyGrid(); // свежие позиции ПОСЛЕ движения — для точного попадания
+
+            const allSnakes = [player, ...bots];
+            allSnakes.forEach(snake => {
+                if (snake.isDead || snake.invulnerableTimer > 0) return;
+
+                const nearby = bodyGrid.query(snake.x, snake.y, snake.radius + 6);
+                for (const seg of nearby) {
+                    if (seg.owner === snake) continue; // самопересечение не карается — как в slither.io
+                    if (colorsEqual(seg.owner.colors, snake.colors)) continue; // змеи одного цвета мирные
+                    const dist = Math.hypot(snake.x - seg.x, snake.y - seg.y);
+                    if (dist < snake.radius + 2) {
+                        if (!seg.owner.isDead && snake.length > seg.owner.length) {
+                            // Кто крупнее — тот и откусывает плоть, с любой стороны.
+                            // Правило общее для всех: игрок, боты — не важно.
+                            const bite = 6;
+                            seg.owner.length = Math.max(0, seg.owner.length - bite);
+                            snake.length += bite;
+                            if (seg.owner.length <= 8) {
+                                seg.owner.die();
+                            }
+                        } else {
+                            snake.die();
+                            if (snake === player) {
+                                setTimeout(gameOver, 300);
+                            }
+                        }
+                        break;
+                    }
+                }
+            });
+
+            document.getElementById('hud-length').textContent = Math.floor(player.length);
+
+            // Столкновения "голова к голове" — обычно смертельны для обеих,
+            // но если цвет змей совпадает, это не бой, а поцелуй :)
+            for (let i = 0; i < allSnakes.length; i++) {
+                const a = allSnakes[i];
+                if (a.isDead || a.invulnerableTimer > 0) continue;
+                for (let j = i + 1; j < allSnakes.length; j++) {
+                    const b = allSnakes[j];
+                    if (b.isDead || b.invulnerableTimer > 0) continue;
+
+                    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (dist >= a.radius + b.radius) continue;
+
+                    if (colorsEqual(a.colors, b.colors)) {
+                        // Поцелуй — никто не умирает, лёгкий разлёт в стороны
+                        kissEffects.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, timer: 0.8 });
+                        const pushAngle = Math.atan2(a.y - b.y, a.x - b.x);
+                        a.angle = pushAngle;
+                        b.angle = pushAngle + Math.PI;
+                    } else if (a.length !== b.length) {
+                        // Кто крупнее — тот съедает противника целиком с головы,
+                        // с довольной мордашкой 😋. Правило общее — даже игрок
+                        // может стать жертвой, если вдруг оказался не крупнее.
+                        const winner = a.length > b.length ? a : b;
+                        const loser = a.length > b.length ? b : a;
+                        winner.length += 20;
+                        winner.eatFlashTimer = 0.9;
+                        loser.die();
+                        if (loser === player) {
+                            setTimeout(gameOver, 300);
+                        }
+                    } else {
+                        a.die();
+                        b.die();
+                        if (a === player || b === player) {
+                            setTimeout(gameOver, 300);
+                        }
+                    }
+                }
+            }
+
+            // Отрисовка эффектов поцелуя
+            for (let idx = kissEffects.length - 1; idx >= 0; idx--) {
+                const fx = kissEffects[idx];
+                fx.timer -= dt;
+                if (fx.timer <= 0) { kissEffects.splice(idx, 1); continue; }
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, fx.timer / 0.8);
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('💋', fx.x, fx.y - 20 - (0.8 - fx.timer) * 20);
+                ctx.restore();
+            }
+
+            // Удаляем мертвых ботов и респавним новых
+            bots = bots.filter(bot => !bot.isDead);
+            while (bots.length < MAX_BOTS) {
+                bots.push(createBot());
+            }
+
+            updateLeaderboard();
+
+            if (gameRunning && !player.isDead) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
